@@ -1,4 +1,4 @@
-package services
+package marketdata
 
 import (
 	"encoding/json"
@@ -8,14 +8,19 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Cryptocompare struct {
+type CryptoClient interface {
+	GetSymbols() (map[string]Symbol, error)
+	GetPrice(symbol string, baseCurrency string) (float64, error)
+}
+
+type CryptocompareClient struct {
 	key string
 	baseURL string
 	client *http.Client
 }
 
-func NewCryptocompare(key string, baseURL string) *Cryptocompare {
-	return &Cryptocompare{key, baseURL, &http.Client{}}
+func NewCryptocompareClient(key string, baseURL string) *CryptocompareClient {
+	return &CryptocompareClient{key, baseURL, &http.Client{}}
 }
 
 type Symbol struct {
@@ -24,7 +29,7 @@ type Symbol struct {
 	CoinName string `json:"CoinName"`
 }
 
-func (c *Cryptocompare) GetSymbols() (map[string]Symbol, error) {
+func (c *CryptocompareClient) GetSymbols() (map[string]Symbol, error) {
 	response, err := c.doRequest("GET", c.baseURL + "data/all/coinlist")
 	if err != nil {
 		return nil, errors.Wrap(err, "Unable to retrieve symbols")
@@ -43,7 +48,7 @@ func (c *Cryptocompare) GetSymbols() (map[string]Symbol, error) {
 	return symbols.Data, nil
 }
 
-func (c *Cryptocompare) GetPrice(symbol string, baseCurrency string) (float64, error) {
+func (c *CryptocompareClient) GetPrice(symbol string, baseCurrency string) (float64, error) {
 	response, err := c.doRequest("GET", c.baseURL + "data/price?fsym=" + symbol + "&tsyms=EUR")
 
 	if err != nil {
@@ -63,7 +68,7 @@ func (c *Cryptocompare) GetPrice(symbol string, baseCurrency string) (float64, e
 	return price, nil
 }
 
-func (c *Cryptocompare) doRequest(method string, url string) ([]byte, error) {
+func (c *CryptocompareClient) doRequest(method string, url string) ([]byte, error) {
 	req, _ := http.NewRequest(method, url, nil)
 	req.Header.Add("authorization", "Apikey " + c.key)
 
