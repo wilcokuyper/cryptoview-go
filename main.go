@@ -58,4 +58,5 @@ func setupAPIRoutes(mux *http.ServeMux) {
 
 	mux.HandleFunc("/api/price", server.GetPriceHandler)
 	mux.HandleFunc("/api/symbols", server.GetSymbolsHandler)
+	mux.HandleFunc("/api/historical-data", server.GetHistoricalDataHandler)
 }
