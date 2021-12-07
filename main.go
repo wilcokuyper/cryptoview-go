@@ -11,15 +11,18 @@ import (
 	"go.uber.org/zap"
 )
 
-var tmpl *template.Template
-
 var logger *zap.Logger
+var tmpl *template.Template
 
 func main() {
 	godotenv.Load();
 
 	var err error
-	logger, err = zap.NewDevelopment()
+	if env, ok := os.LookupEnv("APP_ENV"); ok && env == "development" {
+		logger, err =  zap.NewDevelopment()
+	} else {
+		logger, err =  zap.NewProduction()
+	}
 	if err != nil {
 		log.Fatalf("unable to create zap logger")
 	}
@@ -37,22 +40,16 @@ func main() {
 	// Setup main handler
 	mux.HandleFunc("/", mainHandler)
 
-	// Setup API routes
-	setupAPIRoutes(mux)
+	client := marketdata.NewCryptocompareClient(
+		os.Getenv("CRYPTOCOMPARE_API_KEY"),
+		os.Getenv("CRYPTOCOMPARE_BASE_URL"),
+		logger,
+	)
 
-	// Lookup port and start server
-	port, ok := os.LookupEnv("PORT")
-	if !ok {
-		port = "8080"
-	}
+	server := NewServer(logger, mux, client)
 
-	logger.Info("Starting webserver. Listening on :" + port)
-
-	err = http.ListenAndServe(":" + port, mux)
-	if err != nil {
-		logger.Fatal("Unable to start server", zap.Error(err))
-	}
-}	
+	server.run()
+}
 
 func mainHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
@@ -60,20 +57,4 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	tmpl.ExecuteTemplate(w, "index.tmpl", struct{Title string} {Title: "Cryptoview - Manage your crypto assets"})
-}
-
-func setupAPIRoutes(mux *http.ServeMux) {
-	client := marketdata.NewCryptocompareClient(
-		os.Getenv("CRYPTOCOMPARE_API_KEY"),
-		os.Getenv("CRYPTOCOMPARE_BASE_URL"),
-		logger,
-	)
-	server := &Server{
-		logger: logger,
-		client: client,
-	}
-
-	mux.HandleFunc("/api/price", server.GetPriceHandler)
-	mux.HandleFunc("/api/symbols", server.GetSymbolsHandler)
-	mux.HandleFunc("/api/historical-data", server.GetHistoricalDataHandler)
 }

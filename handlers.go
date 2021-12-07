@@ -4,14 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/wilcokuyper/cryptoview-go/marketdata"
 	"go.uber.org/zap"
 )
-
-type Server struct {
-	logger *zap.Logger
-	client marketdata.CryptoClient
-}
 
 func (s *Server) GetPriceHandler(w http.ResponseWriter, r *http.Request) {
 	s.logger.Info("GetPrice", zap.Any("query", r.URL.Query()))
