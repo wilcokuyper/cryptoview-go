@@ -5,13 +5,16 @@ import (
 	"net/http"
 
 	"github.com/wilcokuyper/cryptoview-go/marketdata"
+	"go.uber.org/zap"
 )
 
 type Server struct {
+	logger *zap.Logger
 	client marketdata.CryptoClient
 }
 
 func (s *Server) GetPriceHandler(w http.ResponseWriter, r *http.Request) {
+	s.logger.Info("GetPrice", zap.Any("query", r.URL.Query()))
 	if r.Method != "GET" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -48,6 +51,7 @@ func (s *Server) GetPriceHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) GetSymbolsHandler(w http.ResponseWriter, r *http.Request) {
+	s.logger.Info("GetSymbols")
 	if r.Method != "GET" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -69,6 +73,7 @@ func (s *Server) GetSymbolsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) GetHistoricalDataHandler(w http.ResponseWriter, r *http.Request) {
+	s.logger.Info("GetHistoricalData", zap.Any("query", r.URL.Query()))
 	if r.Method != "GET" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return

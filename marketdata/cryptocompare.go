@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
+	"go.uber.org/zap"
 )
 
 type Symbol struct {
@@ -35,13 +36,15 @@ type CryptocompareClient struct {
 	key string
 	baseURL string
 	client *http.Client
+	logger *zap.Logger
 }
 
-func NewCryptocompareClient(key string, baseURL string) *CryptocompareClient {
-	return &CryptocompareClient{key, baseURL, &http.Client{}}
+func NewCryptocompareClient(key string, baseURL string, logger *zap.Logger) *CryptocompareClient {
+	return &CryptocompareClient{key, baseURL, &http.Client{}, logger}
 }
 
 func (c *CryptocompareClient) GetSymbols() (map[string]Symbol, error) {
+	c.logger.Info("GetSymbols")
 	response, err := c.doRequest("GET", c.baseURL + "data/all/coinlist")
 	if err != nil {
 		return nil, errors.Wrap(err, "Unable to retrieve symbols")
@@ -60,6 +63,11 @@ func (c *CryptocompareClient) GetSymbols() (map[string]Symbol, error) {
 }
 
 func (c *CryptocompareClient) GetPrice(symbol string, baseCurrency string) (float64, error) {
+	c.logger.Info(
+		"GetPrice",
+		zap.String("symbol", symbol),
+		zap.String("currency", baseCurrency),
+	)
 	response, err := c.doRequest("GET", c.baseURL + "data/price?fsym=" + symbol + "&tsyms=" + baseCurrency)
 	if err != nil {
 		return -1, errors.Wrap(err, "Unable to perform get price for symbol " + symbol)
@@ -78,6 +86,12 @@ func (c *CryptocompareClient) GetPrice(symbol string, baseCurrency string) (floa
 }
 
 func (c *CryptocompareClient) GetHistoricalData(symbol string, baseCurrency string, limit int) ([]DataPoint, error) {
+	c.logger.Info(
+		"GetHistoricalData",
+		zap.String("symbol", symbol),
+		zap.String("currency", baseCurrency),
+		zap.Int("limit", 16),
+	)
 	response, err := c.doRequest("GET", c.baseURL + "data/v2/histominute?fsym=" + symbol + "&tsym=" + baseCurrency + "&limit=" + strconv.Itoa(limit))
 	if err != nil {
 		return nil, errors.Wrap(err, "Unable to get historical data for symbol " + symbol)

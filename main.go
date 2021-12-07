@@ -8,12 +8,22 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/wilcokuyper/cryptoview-go/marketdata"
+	"go.uber.org/zap"
 )
 
 var tmpl *template.Template
 
+var logger *zap.Logger
+
 func main() {
 	godotenv.Load();
+
+	var err error
+	logger, err = zap.NewDevelopment()
+	if err != nil {
+		log.Fatalf("unable to create zap logger")
+	}
+	defer logger.Sync()
 
 	// Parse templates
 	tmpl = template.Must(template.ParseGlob("./templates/*.tmpl"))
@@ -36,11 +46,11 @@ func main() {
 		port = "8080"
 	}
 
-	log.Println("Starting webserver. Listening on :" + port)
+	logger.Info("Starting webserver. Listening on :" + port)
 
-	err := http.ListenAndServe(":" + port, mux)
+	err = http.ListenAndServe(":" + port, mux)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal("Unable to start server", zap.Error(err))
 	}
 }	
 
@@ -53,8 +63,15 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func setupAPIRoutes(mux *http.ServeMux) {
-	client := marketdata.NewCryptocompareClient(os.Getenv("CRYPTOCOMPARE_API_KEY"), os.Getenv("CRYPTOCOMPARE_BASE_URL"))
-	server := &Server{client: client}
+	client := marketdata.NewCryptocompareClient(
+		os.Getenv("CRYPTOCOMPARE_API_KEY"),
+		os.Getenv("CRYPTOCOMPARE_BASE_URL"),
+		logger,
+	)
+	server := &Server{
+		logger: logger,
+		client: client,
+	}
 
 	mux.HandleFunc("/api/price", server.GetPriceHandler)
 	mux.HandleFunc("/api/symbols", server.GetSymbolsHandler)
