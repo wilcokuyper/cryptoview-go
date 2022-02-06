@@ -10,8 +10,6 @@ import (
 	"go.uber.org/zap"
 )
 
-var logger *zap.Logger
-
 func main() {
 	var err error
 	err = godotenv.Load()
@@ -19,21 +17,22 @@ func main() {
 		return
 	}
 
-	if env, ok := os.LookupEnv("APP_ENV"); ok && env == "development" {
-		logger, err = zap.NewDevelopment()
-	} else {
-		logger, err = zap.NewProduction()
-	}
+	logger, err := setupLogger()
 	if err != nil {
-		log.Fatalf("unable to create zap logger")
+		log.Fatal(err)
 	}
 	defer logger.Sync()
 
-	db, err := sql.Open("mysql", "")
-	defer db.Close()
-	if err != nil {
-		logger.Fatal("unable to connect to database")
+	connStr, ok := os.LookupEnv("DB_CONN_STRING")
+	if !ok {
+		log.Fatal("missing DB_CONN_STRING environment variable")
 	}
+
+	db, err := sql.Open("mysql", connStr)
+	if err != nil {
+		log.Fatal("Unable to connect to the database")
+	}
+	defer db.Close()
 
 	server := NewServer(logger, db)
 
@@ -44,4 +43,12 @@ func main() {
 	}
 
 	server.Run(port)
+}
+
+func setupLogger() (*zap.Logger, error) {
+	if env, ok := os.LookupEnv("APP_ENV"); ok && env == "development" {
+		return zap.NewDevelopment()
+	} else {
+		return zap.NewProduction()
+	}
 }
