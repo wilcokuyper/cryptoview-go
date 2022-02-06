@@ -2,9 +2,11 @@ package wallet
 
 import (
 	"encoding/json"
-	"go.uber.org/zap"
+	"fmt"
 	"net/http"
-	"strconv"
+
+	"github.com/wilcokuyper/cryptoview-go/services/auth"
+	"go.uber.org/zap"
 )
 
 type WalletItem struct {
@@ -38,9 +40,9 @@ func (s *WalletHandler) viewWallet() http.HandlerFunc {
 			return
 		}
 
-		// TODO: refactor to user userId from the logged in user
-		userId, _ := strconv.Atoi(r.URL.Query().Get("userId"))
-		items, err := s.client.WalletItemsForUserId(userId)
+		user, _ := r.Context().Value(auth.ContextUser("user")).(auth.User)
+		fmt.Printf("user: %v\n", user)
+		items, err := s.client.WalletItemsForUserId(int(user.Id))
 		if err != nil {
 			s.logger.Info("viewWallet:", zap.Error(err))
 			w.WriteHeader(http.StatusInternalServerError)
@@ -86,8 +88,8 @@ func (s *WalletHandler) deleteItem() http.HandlerFunc {
 }
 
 func (s *WalletHandler) SetupRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("/wallet/view", s.viewWallet())
-	mux.HandleFunc("/wallet/add", s.addItem())
-	mux.HandleFunc("/wallet/update", s.updateItem())
-	mux.HandleFunc("/wallet/delete", s.deleteItem())
+	mux.HandleFunc("/wallet/view", auth.Middleware(s.viewWallet()))
+	mux.HandleFunc("/wallet/add", auth.Middleware(s.addItem()))
+	mux.HandleFunc("/wallet/update", auth.Middleware(s.updateItem()))
+	mux.HandleFunc("/wallet/delete", auth.Middleware(s.deleteItem()))
 }
