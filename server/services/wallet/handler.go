@@ -2,7 +2,6 @@ package wallet
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/wilcokuyper/cryptoview-go/services/auth"
@@ -41,7 +40,6 @@ func (s *WalletHandler) viewWallet() http.HandlerFunc {
 		}
 
 		user, _ := r.Context().Value(auth.ContextUser("user")).(auth.User)
-		fmt.Printf("user: %v\n", user)
 		items, err := s.client.WalletItemsForUserId(int(user.Id))
 		if err != nil {
 			s.logger.Info("viewWallet:", zap.Error(err))
